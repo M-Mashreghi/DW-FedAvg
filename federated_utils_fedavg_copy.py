@@ -182,9 +182,7 @@ def create_non_iid_clients(image_list, label_list, num_clients=10, initial='clie
 
         shards.append(client_data)
 
-        print(f"Client {client_names[i]} has {len(client_data)} data samples.")
-        print("asd1")
-    print("asdas3")
+
     # Number of clients must equal the number of shards
     assert len(shards) == len(client_names)
 
