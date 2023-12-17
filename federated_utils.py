@@ -14,10 +14,10 @@ from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import confusion_matrix
+from tensorflow import keras
 
 
 
-import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D
 from tensorflow.keras.layers import MaxPooling2D
@@ -27,7 +27,7 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras import backend as K
 
-
+import tensorflow as tf
 
 
 

@@ -17,16 +17,6 @@ from sklearn.metrics import confusion_matrix
 
 
 
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D
-from tensorflow.keras.layers import MaxPooling2D
-from tensorflow.keras.layers import Activation
-from tensorflow.keras.layers import Flatten
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.optimizers import SGD
-from tensorflow.keras import backend as K
-
 
 
 # def load(paths, verbose=-1):
@@ -48,6 +38,74 @@ from tensorflow.keras import backend as K
 #             print("[INFO] processed {}/{}".format(i + 1, len(paths)))
 #     # return a tuple of the data and labels
 #     return data, labels
+
+
+
+import random
+from torch.utils.data import DataLoader
+
+def create_non_iid_clients(image_list, label_list, num_clients=10, initial='clients'):
+    """
+    Return a dictionary with keys as clients' names and values as data shards,
+    represented as tuples of images and label lists. The data distribution among
+    clients is non-identically distributed (non-IID).
+
+    Args:
+        image_list (list): A list of numpy arrays of training images.
+        label_list (list): A list of binarized labels for each image.
+        num_clients (int): Number of federated members (clients).
+        initial (str): The clients' name prefix, e.g., 'clients_1'.
+
+    Returns:
+        dict: A dictionary mapping client names to non-IID data shards.
+    """
+
+    # Create a list of client names
+    client_names = ['{}_{}'.format(initial, i + 1) for i in range(num_clients)]
+
+    # Randomize the data
+    data = list(zip(image_list, label_list))
+    random.shuffle(data)
+
+    shards = []
+    for i in range(num_clients):
+        # Define a custom distribution pattern for each client (you can customize this based on your needs)
+        # For example, distribute 70% of samples from class 0 and 30% from class 1 to the first client,
+        # and vice versa for the second client
+        if i % 2 == 0:
+            class_0_fraction = 0.7
+        else:
+            class_0_fraction = 0.3
+
+        # Select samples based on the defined distribution
+        class_0_samples = int(len(data) * class_0_fraction)
+        client_data = data[:class_0_samples] if i % 2 == 0 else data[class_0_samples:]
+
+        # Remove selected samples from the data to avoid overlap
+        data = data[class_0_samples:]
+
+        shards.append(client_data)
+
+    # Number of clients must equal the number of shards
+    assert len(shards) == len(client_names)
+
+    return {client_names[i]: shards[i] for i in range(len(client_names))}
+
+# Example usage:
+# Assuming image_list and label_list are your data
+# client_data = create_non_iid_clients(image_list, label_list, num_clients=10, initial='client')
+# client_name = 'client_1'  # Change this to the specific client name you want to access
+# client_dataset = CustomDataset(*zip(*client_data[client_name]))
+# client_dataloader = DataLoader(client_dataset, batch_size=32, shuffle=True)
+
+
+
+
+
+
+
+
+
 
 
 def create_clients(image_list, label_list, num_clients=10, initial='clients'):
@@ -158,7 +216,7 @@ def test_model(X_test, Y_test,  model, comm_round):
     TN = cm[1][1]
     TPR = TP/(TP+FN)
     FPR = FP/(FP+TN)
-    
+    print(cm)
     fpr, tpr, thresholds = metrics.roc_curve(Y_test, logits)
     auc_value = roc_auc_score(Y_test, logits)
     
