@@ -169,9 +169,9 @@ def create_non_iid_clients(image_list, label_list, num_clients=10, initial='clie
         # For example, distribute 70% of samples from class 0 and 30% from class 1 to the first client,
         # and vice versa for the second client
         if i % 2 == 0:
-            class_0_fraction = 0.7
+            class_0_fraction = 0.5
         else:
-            class_0_fraction = 0.3
+            class_0_fraction = 0.45
 
         # Select samples based on the defined distribution
         class_0_samples = int(len(data) * class_0_fraction)
