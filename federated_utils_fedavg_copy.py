@@ -140,16 +140,21 @@ def scale_model_weights(weight, scalar):
 
 
 
-def create_non_iid_clients(image_list, label_list, num_clients=10, initial='clients'):
+import numpy as np
+import random
+
+def create_clients_non_iid(image_list, label_list, num_clients=10, min_samples_per_client=32, initial='clients'):
     """
     Return a dictionary with keys as clients' names and values as data shards,
     represented as tuples of images and label lists. The data distribution among
-    clients is non-identically distributed (non-IID).
+    clients is non-identically distributed (non-IID), and each client has at least
+    32 data points.
 
     Args:
         image_list (list): A list of numpy arrays of training images.
         label_list (list): A list of binarized labels for each image.
         num_clients (int): Number of federated members (clients).
+        min_samples_per_client (int): Minimum number of data points per client.
         initial (str): The clients' name prefix, e.g., 'clients_1'.
 
     Returns:
@@ -165,37 +170,36 @@ def create_non_iid_clients(image_list, label_list, num_clients=10, initial='clie
 
     shards = []
     for i in range(num_clients):
-        # Define a custom distribution pattern for each client (you can customize this based on your needs)
-        # For example, distribute 70% of samples from class 0 and 30% from class 1 to the first client,
-        # and vice versa for the second client
-        if i % 2 == 0:
-            class_0_fraction = 0.5
-        else:
-            class_0_fraction = 0.45
-
-        # Select samples based on the defined distribution
-        class_0_samples = int(len(data) * class_0_fraction)
-        client_data = data[:class_0_samples] if i % 2 == 0 else data[class_0_samples:]
-
-        # Remove selected samples from the data to avoid overlap
-        data = data[class_0_samples:]
-
+        # Generate a random alpha value for each client
+        alpha = random.uniform(0.1, 5.0)
+        
+        # Define a Dirichlet distribution to sample proportions for each class within the client
+        class_proportions = np.random.dirichlet([alpha] * len(set(label_list)))
+        
+        # Calculate the number of samples each client should get
+        total_samples = len(data)
+        client_samples = int((total_samples * 1.0 / num_clients) + 0.5)
+        
+        # Ensure each client gets at least min_samples_per_client
+        client_samples = max(client_samples, min_samples_per_client)
+        
+        # Sample data for the current client using the class proportions
+        client_data = []
+        for cls in set(label_list):
+            class_samples = int(client_samples * class_proportions[cls] + 0.5)
+            class_data = [item for item in data if item[1] == cls][:class_samples]
+            client_data.extend(class_data)
+        
         shards.append(client_data)
 
+        # Print the number of data points for each class in the current client
+        class_counts = {cls: sum(1 for _, label in client_data if label == cls) for cls in set(label_list)}
+        print(f"Client {client_names[i]}: {class_counts}")
 
     # Number of clients must equal the number of shards
     assert len(shards) == len(client_names)
 
-    return {client_names[i]: shards[i] for i in range(len(client_names))}
-
-# Example usage:
-# Assuming image_list and label_list are your data
-# client_data = create_non_iid_clients(image_list, label_list, num_clients=10, initial='client')
-# client_name = 'client_1'  # Change this to the specific client name you want to access
-# client_dataset = CustomDataset(*zip(*client_data[client_name]))
-# client_dataloader = DataLoader(client_dataset, batch_size=32, shuffle=True)
-
-
+    return {client_names[i]: shards[i] for i in range(num_clients)}
 
 
 
